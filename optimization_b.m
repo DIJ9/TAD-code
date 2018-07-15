@@ -13,7 +13,7 @@ g = 1.352;% gravity [m/s^2]
 nu = 1.2e-6;% kinematic viscosity [m^2/s]
 
 %% Define variables
-m = 4:0.5:10;% vehicle mass [kg]
+m = 4:2:10;% vehicle mass [kg]
 V = 2:0.1:14;% forward speed flight range
 Vc = 1:0.1:10;% climb speed range
 Vd = -6:0.01:-1;% descent speed range
