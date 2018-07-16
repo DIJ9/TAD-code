@@ -37,16 +37,17 @@ vh = sqrt(DL*g/2/rho);% ideal induced velocity in hover
 Ph = Th*vh;% ideal induced power in hover
 
 % Payload fuselage design
-it = 0.06;% insulation thickness [m]
-pl = 0.17;% payload length [m]
-pw = 0.12;% payload width [m]
-ph = 0.07;% payload height [m]
-Ap = 0.012;% payload frontal area [m^2] or pw x ph 
+% Payload/fuselage design
+df = 300;% fuselage density [kg/m^3]
+rf = (m/df*3/4*1/pi)^(1/3);
+Af = pi*rf^2;% fuselage frontal area [m^2]
+
 mp = 2;% payload mass [kg]
 ma = 0.5;% avionics mass [kg]
 da = 2500;% avionics density [kg/m^3]
 va = ma/da;% avionics volume [m^3]
 de = 2500;% energy storage density [kg/m^3]
+
 Cdmulti = 1.5;% drag multiplier
 
 % Efficiency coefficients
@@ -72,11 +73,11 @@ m2 = 0.322;% motor constant [kg/N-m]
 Ebconst = 100;% Wh/kg
 
 %%
-% Forward flight analysis
-V = 5:0.05:15;% forward speed flight range
-% Optimize disk angle of attack till maximum mission radius is found
-% AoAop = zeros(1,length(V));
+% Level flight analysis
+V = 3:0.05:15;% forward speed flight range
+
 mbattery = 0;
+% Matrix allocation
 Ss = zeros(1,length(V));
 time = zeros(1,length(V));
 hours = zeros(1,length(V));
@@ -91,7 +92,8 @@ kbs = zeros(1,length(V));
 vs = zeros(1,length(V));
 
 kw = 20;% wing weight coefficient [N/m^2]
-AR = 6;
+
+AR = 11;
 CD0 = 0.03;
 e = 0.75;
 K = 1/pi/AR/e;
@@ -100,18 +102,17 @@ counter = 0;
 
 for ii = 1:length(V)
 
-%         Re = V(1,ii)*lre/nu;% Reynolds number
-%         if Re < 2e5
-%             Cdbody = 0.47;% drag coefficient of vehicle body
-%         else
-%             Cdbody = 0.18;
-%         end
-        Cdbody = 0.18;  
+        Re = V(1,ii)*2*rf/nu;% Reynolds number
+        if Re < 2e5
+            Cdbody = 0.47;% drag coefficient of vehicle body
+        else
+            Cdbody = 0.18;
+        end
         S = 2*N/rho/CL/(V(1,ii)^2);
         mwing = kw*S;
         kws = N/S;
         Dwing = 1/2*rho*(CD0+K*CL^2)*S*V(1,ii)^2;
-        Dbody = 1/2*Cdbody*V(1,ii)^2*rho*0.1252;% parasite drag [N]
+        Dbody = 1/2*Cdbody*V(1,ii)^2*rho*Af;% parasite drag [N]
         Ttotal = Dwing+Dbody;
         Trotor = Ttotal/Nr;
         
@@ -145,16 +146,15 @@ for ii = 1:length(V)
         kwss(1,ii) = kws;
 
 end
-plot(V,mba)
 
-% %%
+%%
 % figure(1)
 % hold on
 % si = 2;
-% h5 = plot(V,Ps,'linewidth',si);
-% plot(V,Pis,'linewidth',si)
-% plot(V,Pps,'linewidth',si)
-% hh5 = plot(V(1,Imin),Ps(1,Imin),'ok','linewidth',si);
+% h5 = plot(V,mba,'linewidth',si);
+% plot(V,mwings,'linewidth',si)
+% % plot(V,Pps,'linewidth',si)
+% % hh5 = plot(V(1,Imin),Ps(1,Imin),'ok','linewidth',si);
 % 
 % h = gca;
 % grid off;
@@ -162,16 +162,16 @@ plot(V,mba)
 % % set(h,'GridAlpha',0.1,'GridLineStyle','--','GridColor',[0.5 0.5 0.5]);
 % % title('ground config');
 % xlabel('airspeed V [m/s]','FontSize',fs);
-% ylabel('Power [W] ','FontSize',fs);
+% ylabel('Mass [kg] ','FontSize',fs);
 % set(h,'FontName','Times New Roman','linewidth',si);
 % set(h,'FontName','Times New Roman','linewidth',si);
-% legend('Total','Induced','Body drag','spreadsheet');
+% legend('Battery mass','Wing mass');
 % 
-% a1 = 0;
-% a2 = 16;
+% % a1 = 0;
+% % a2 = 16;
 % b1 = 0;
-% b2 = 120;
-% xlim([a1 a2]);
+% b2 = 10;
+% % xlim([a1 a2]);
 % ylim([b1 b2]);
 % 
 % FS = 12;
@@ -182,49 +182,86 @@ plot(V,mba)
 % set(h,'YTick',yt) ;
 % set(h,'YTickLabel',yt,'fontsize',FS) ;
 % pbaspect([2 1 1])
-% %%
-% figure(2)
-% si = 2;
-% subplot(2,1,1)
-% hold on
-% hhh5 = plot(V,hours,'linewidth',si);
-% hhhh5 = plot(V(1,Imin),hours(1,Imin),'ok','linewidth',si);
-% 
-% h = gca;
-% grid off;
-% fs = 12;
-% 
-% ylabel('Endurance [hours] ','FontSize',fs);
-% set(h,'FontName','Times New Roman','linewidth',si);
-% set(h,'FontName','Times New Roman','linewidth',si);
-% 
-% subplot(2,1,2)
-% hold on
-% hhhhh5 = plot(V,range,'linewidth',si);
-% hhhhhh5 = plot(V(1,Imin),range(1,Imin),'ok','linewidth',si);
-% 
-% h = gca;
-% grid off;
-% fs = 12;
-% 
-% xlabel('Airspeed V [m/s]','FontSize',fs);
-% ylabel('Range [km] ','FontSize',fs);
-% set(h,'FontName','Times New Roman','linewidth',si);
-% set(h,'FontName','Times New Roman','linewidth',si);
-% 
+%%
+figure(2)
+hold on
+si = 2;
+h5 = plot(V,Ss,'linewidth',si);
+% plot(V,mwings,'linewidth',si)
+% plot(V,Pps,'linewidth',si)
+% hh5 = plot(V(1,Imin),Ps(1,Imin),'ok','linewidth',si);
+
+h = gca;
+grid off;
+fs = 12;
+% set(h,'GridAlpha',0.1,'GridLineStyle','--','GridColor',[0.5 0.5 0.5]);
+% title('ground config');
+xlabel('airspeed V [m/s]','FontSize',fs);
+ylabel('Wing area [m^2] ','FontSize',fs);
+set(h,'FontName','Times New Roman','linewidth',si);
+set(h,'FontName','Times New Roman','linewidth',si);
+% legend('Battery mass','Wing mass');
+
 % a1 = 0;
 % a2 = 16;
 % b1 = 0;
-% b2 = 5.5;
-% xlim([a1 a2]);
-% % ylim([b1 b2]);
+% b2 = 10;
+% % xlim([a1 a2]);
+% ylim([b1 b2]);
 % 
+% FS = 12;
+% xt = a1:1:a2 ;
+% set(h,'XTick',xt) ;
+% set(h,'XTickLabel',xt,'fontsize',FS) ;
+% yt = b1:10:b2 ; 
+% set(h,'YTick',yt) ;
+% set(h,'YTickLabel',yt,'fontsize',FS) ;
+% pbaspect([2 1 1])
+%%
+%%
+figure(2)
+si = 2;
+subplot(2,1,1)
+hold on
+hhh5 = plot(V,hours,'linewidth',si);
+% hhhh5 = plot(V(1,Imin),hours(1,Imin),'ok','linewidth',si);
+
+h = gca;
+grid off;
+fs = 12;
+
+ylabel('Endurance [hours] ','FontSize',fs);
+set(h,'FontName','Times New Roman','linewidth',si);
+set(h,'FontName','Times New Roman','linewidth',si);
+ylim([0 10]);
+
+subplot(2,1,2)
+hold on
+hhhhh5 = plot(V,range,'linewidth',si);
+% hhhhhh5 = plot(V(1,Imin),range(1,Imin),'ok','linewidth',si);
+
+h = gca;
+grid off;
+fs = 12;
+
+xlabel('Airspeed V [m/s]','FontSize',fs);
+ylabel('Range [km] ','FontSize',fs);
+set(h,'FontName','Times New Roman','linewidth',si);
+set(h,'FontName','Times New Roman','linewidth',si);
+
+a1 = 0;
+a2 = 16;
+b1 = 0;
+b2 = 250;
+% xlim([a1 a2]);
+ylim([b1 b2]);
+
 % FS = 12;
 % xt = a1:2:a2 ;
 % set(h,'XTick',xt) ;
 % set(h,'XTickLabel',xt,'fontsize',FS) ;
-% % yt = b1:0.5:b2 ; 
-% % set(h,'YTick',yt) ;
-% % set(h,'YTickLabel',yt,'fontsize',FS) ;
+% yt = b1:0.5:b2 ; 
+% set(h,'YTick',yt) ;
+% set(h,'YTickLabel',yt,'fontsize',FS) ;
 
 
